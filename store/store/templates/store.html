@@ -1,0 +1,124 @@
+{% extends "index.html" %}
+{% block title %}
+Store
+{% endblock%}
+
+{% block body %}
+
+<!-- Showing Products -->
+<div class="container" style="padding-top: 12vh;">
+    {% for product in current_page_items %}
+    {% if forloop.counter0|divisibleby:3 %}
+    <div class="row">
+        {% endif %}
+        <div class="col-md-4">
+            <div class="card mb-3 border-primary" style="height: 71vh;">
+                <div class="card-body">
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail"
+                        style="height: 35vh;">
+                    <h5 class="card-title mt-1" style="height: 3vh; overflow: auto;">{{ product.name }}</h5>
+                    <p class="card-text"><b>Price: Rs. {{ product.price }}</b></p>
+                    <p class="card-text mb-2" style="height: 15vh; overflow: auto;">{{ product.description }}</p>
+                </div>
+                <div class="card-footer" style="flex-wrap: wrap;">
+                    <div class="row">
+                        <div class="col-sm-12 text-center">
+                            <button class="btn btn-warning btn-sm add-to-cart" data-product-id="{{ product.id }}"
+                                data-product-name="{{ product.name }}" data-product-price="{{ product.price }}">Add to
+                                Cart</button>
+                            <button class="btn btn-info btn-sm" onclick="checkout('{{ product.id }}')">Checkout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if forloop.counter|divisibleby:3 or forloop.last %}
+    </div>
+    {% endif %}
+    {% endfor %}
+
+
+    <!-- Pagination -->
+    <br>
+    <nav aria-label="Page navigation example">
+        <ul class="pagination justify-content-center">
+            {% if current_page_items.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{current_page_items.previous_page_number}}">Previous
+                    Page</a></li>
+            {% endif %}
+            {% if current_page_items.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{current_page_items.next_page_number}}">Next
+                    Page</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <br>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get the cart button element and initialize the cart count
+        const cartButton = document.getElementById('cart');
+        const authenticated = JSON.parse('{{ user.is_authenticated|lower }}');
+        const cartItemCount = '{{ cart_items.count }}';
+        let cartCount = 0;
+
+
+        // Adding cart_items if present to localStorage
+        if (authenticated && cartItemCount > 0) {
+            let cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+            
+            // localStorage.setItem('cartItems', JSON.stringify(cartItems));
+        }
+
+        // Attach event listeners to "Add to Cart" buttons
+        const addToCartButtons = document.querySelectorAll('.add-to-cart');
+        addToCartButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const productId = button.dataset.productId;
+                const productName = button.dataset.productName;
+                const productPrice = button.dataset.productPrice
+                if (authenticated) {
+                    addToCart(productId, productName, productPrice);
+                } else {
+                    showFlashMessage("Please login to add items to the cart", "info")
+                }
+            });
+        });
+
+        // Adding items to the cart
+        function addToCart(productId, productName, productPrice) {
+            // Check if the product is already in the cart
+            let cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+            const alreadyInCart = cartItems.some(item => item.productId === productId);
+            if (alreadyInCart) {
+                showFlashMessage(`Product already exists in the cart`, 'info');
+            } else {
+                // Add the item to the cart and update the cart count
+                cartItems.push({ productId, productName, productPrice });
+                cartCount = cartItems.length;
+                localStorage.setItem('cartItems', JSON.stringify(cartItems));
+                cartButton.textContent = `Cart (${cartCount})`;
+                showFlashMessage(`Product added successfully to the cart`, 'success');
+                addtoCartAjax(cartItems, cartCount, '{{user.id}}')
+            }
+        }
+
+        function addtoCartAjax(cartItems, cartCount, userId) {
+            $.ajax({
+                url: "/addtocart/",
+                type: "POST",
+                data: {
+                    "cartItems": JSON.stringify(cartItems),
+                    "cartCount": cartCount,
+                    "userId": userId,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+            })
+        }
+        console.log("Hey ", JSON.parse(localStorage.getItem('cartItems')));
+    });
+
+</script>
+{% endblock %}
