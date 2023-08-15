@@ -30,8 +30,19 @@ def store_view(request):
     current_page_number = request.GET.get('page')
     current_page_items = paginator.get_page(current_page_number)
 
-    cart_items = get_cart(request)
-    return render(request, 'store.html', {'current_page_items': current_page_items,"cart_items": cart_items})
+    items_to_add_to_cookie = []
+    if request.user.is_authenticated:
+        cart_items = get_cart(request)
+        print("Cart Items are ",cart_items)
+        if cart_items:
+            cookie = json.loads(request.COOKIES.get('cartItems', '[]'))
+            print("Cookie: ",cookie)
+            for item in cart_items:
+                item.product_price = str(item.product_price)
+                if not any(existing_item['productId'] == str(item.product_id) for existing_item in cookie):
+                    items_to_add_to_cookie.append({'productId': item.product_id, 'productName': item.product_name, 'productPrice': item.product_price})
+        
+    return render(request, 'store.html', {'current_page_items': current_page_items,"items_to_add_to_cookie":json.dumps(items_to_add_to_cookie)})
 
     
 def login_view(request):
@@ -59,10 +70,11 @@ def login_view(request):
     return render(request,"login.html")
 
 def logout_view(request):
-    logout(request)
-    request.session.pop("cartItems","None")
-    messages.success(request,"You have been logged out!")
-    return redirect("/")
+    response = redirect("/")
+    response.set_cookie("cartItems", "", expires="Thu, 01 Jan 1970 00:00:00 GMT")
+    messages.success(request, "You have been logged out!")
+    logout(request)  
+    return response
 
 def signup_view(request):
     return render(request,"signup.html")
