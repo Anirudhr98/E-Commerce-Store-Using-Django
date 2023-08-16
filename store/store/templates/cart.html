@@ -5,6 +5,7 @@ Cart Page
 {% endblock %}
 
 {% block body %}
+{% if cart_items %}
 <div class="container">
     <h2>Cart</h2>
     <table class="table" id="cart_table">
@@ -42,12 +43,22 @@ Cart Page
     <br>
     <button class="btn btn-danger" onclick="removeAllFromCart()">Remove All Items From Cart</button>
 </div>
+{% else %}
+<div class="alert alert-primary alert-dismissible fade show" role="alert">
+     You have no items in cart currently!
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div style="padding-left: 45vw; padding-top: 10vh;">
+  <a class="btn btn-warning" href="/">Go Shopping!</a>
+</div>
+{% endif %}
 
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         update_total_cart_value()
-        console.log("Hey ", getCookie('cartItems'));
     });
 
     function update_total_cart_value() {
@@ -77,11 +88,16 @@ Cart Page
             data: {
                 'csrfmiddlewaretoken': getCookie('csrftoken'),
             },
+            success: function () {
+                cart_items = JSON.parse(getCookie('cartItems'));
+                updated_cart_items = cart_items.filter(item => item.productId != id)
+                setCookie('cartItems', JSON.stringify(updated_cart_items))
+                update_cart_page_upon_cart_item_removal(id)
+                if(updated_cart_items.length == 0){
+                    windows.location.replace("/");
+                }
+            },
         });
-        cart_items = JSON.parse(getCookie('cartItems'));
-        updated_cart_items = cart_items.filter(item => item.productId != id)
-        setCookie('cartItems', JSON.stringify(updated_cart_items))
-        update_cart_page_upon_cart_item_removal(id)
     }
 
     function update_cart_page_upon_cart_item_removal(id) {
@@ -91,7 +107,6 @@ Cart Page
     }
 
     function removeAllFromCart() {
-        localStorage.removeItem("cartItems");
         $.ajax({
             url: '/cart/removeallitemsfromcart',
             type: 'POST',
@@ -99,6 +114,7 @@ Cart Page
                 'csrfmiddlewaretoken': getCookie('csrftoken'),
             },
             success: function () {
+                document.cookie = 'cartItems' + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                 window.location.replace("/");
             },
         });

@@ -3,7 +3,7 @@ from django.db.models import UniqueConstraint
 
 class Cart(models.Model):
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='carts',null=True)  
-    product_id = models.IntegerField()
+    product_id = models.IntegerField(unique=True)
     product_name = models.CharField(max_length=128, default="")
     quantity = models.IntegerField(default=1)
     product_price = models.DecimalField(decimal_places=2, max_digits=10)
@@ -16,7 +16,10 @@ class Cart(models.Model):
     def __str__(self):
         return f"Product Name: {self.product_name}, User: {self.user.username}"
 
-    UniqueConstraint(fields=('user','product_id'),name="cart_unique_constraint")
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['user', 'product_id'], name='unique_cart_item')
+        ]
 
 
 class User(models.Model):

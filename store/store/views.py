@@ -33,10 +33,8 @@ def store_view(request):
     items_to_add_to_cookie = []
     if request.user.is_authenticated:
         cart_items = get_cart(request)
-        print("Cart Items are ",cart_items)
         if cart_items:
             cookie = json.loads(request.COOKIES.get('cartItems', '[]'))
-            print("Cookie: ",cookie)
             for item in cart_items:
                 item.product_price = str(item.product_price)
                 if not any(existing_item['productId'] == str(item.product_id) for existing_item in cookie):
@@ -83,12 +81,14 @@ def add_to_cart_view(request):
     if request.method == "POST":
         new_cart_items = json.loads(request.POST.get('cartItems'))
         userId = request.POST.get('userId')
-        user = User.objects.get(pk = userId)
-        print("Cart Items are ",new_cart_items)
+        user = User.objects.get(pk=userId)
+        existing_cart_items = Cart.objects.filter(user=user)
         for item in new_cart_items:
-            cart_item = Cart(user=user,product_id = item["productId"],product_name = item["productName"],product_price = item["productPrice"])
-            cart_item.save()
-        return redirect("/")   
+            if not any(str(existing_item.product_id) == item["productId"] for existing_item in existing_cart_items):
+                cart_item = Cart(user=user, product_id=item["productId"], product_name=item["productName"], product_price=item["productPrice"])
+                cart_item.save()
+        return redirect('/')
+  
 
 def cart_view(request):
     cart_items = Cart.objects.filter(user_id=request.user.id)
@@ -107,7 +107,6 @@ def get_cart(request):
 def remove_item_from_cart(request,product_id):
     if request.method == "POST":
         user = request.user
-        print("Product Id is ",product_id)
         try:
             Cart.objects.filter(user_id = user.id,product_id = product_id).delete()
             return redirect('/cart/')

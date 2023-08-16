@@ -62,10 +62,10 @@ Store
         const cartButton = document.getElementById('cart');
         const authenticated = JSON.parse('{{ user.is_authenticated|lower }}');
         let cartCount = 0;
-     
+
         // Adding items in cart to cookie
         const items_to_add_to_cookie = JSON.parse('{{ items_to_add_to_cookie|safe }}');
-        if (items_to_add_to_cookie){
+        if (items_to_add_to_cookie) {
             cookie = JSON.parse(getCookie('cartItems'));
             cookie.push(...items_to_add_to_cookie);
             setCookie('cartItems', JSON.stringify(cookie));
@@ -88,23 +88,17 @@ Store
 
         // Adding items to the cart
         function addToCart(productId, productName, productPrice) {
-            // Check if the product is already in the cart
-            let cartItems = JSON.parse(getCookie('cartItems')) ;
+            let cartItems = JSON.parse(getCookie('cartItems'));
             const alreadyInCart = cartItems.some(item => item.productId == productId);
             if (alreadyInCart) {
                 showFlashMessage(`Product already exists in the cart`, 'info');
             } else {
-                // Add the item to the cart and update the cart count
                 cartItems.push({ productId, productName, productPrice });
-                cartCount = cartItems.length;
-                setCookie('cartItems', JSON.stringify(cartItems));
-                cartButton.textContent = `Cart (${cartCount})`;
-                showFlashMessage(`Product added successfully to the cart`, 'success');
-                addtoCartAjax(cartItems, cartCount, '{{user.id}}')
+                addtoCartAjax(cartItems, cartCount, '{{user.id}}', productId, productName, productPrice);
             }
         }
 
-        function addtoCartAjax(cartItems, cartCount, userId) {
+        function addtoCartAjax(cartItems, cartCount, userId, productId, productName, productPrice) {
             $.ajax({
                 url: "/addtocart/",
                 type: "POST",
@@ -114,14 +108,22 @@ Store
                     "userId": userId,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
-            })
+                success: function () {
+                    cartCount = cartItems.length;
+                    setCookie('cartItems', JSON.stringify(cartItems));
+                    cartButton.textContent = `Cart (${cartCount})`;
+                    showFlashMessage(`Product added successfully to the cart`, 'success');
+                }
+            });
         }
+
+
+
+        // Updating Cart Button Information
         updating_cart_button = JSON.parse(getCookie('cartItems'));
-        if (updating_cart_button){
+        if (updating_cart_button) {
             cartButton.textContent = 'Cart(' + updating_cart_button.length + ')';
         }
-        console.log("Hey",updating_cart_button);
-
     });
 
 </script>
