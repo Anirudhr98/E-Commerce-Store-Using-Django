@@ -93,10 +93,15 @@ def add_to_cart_view(request):
 def cart_view(request):
     cart_items = Cart.objects.filter(user_id=request.user.id)
     cart_numbers = [i for i in range(1,11)]
+    user_address = cart_items[0].user.address
+    user_phone_number = cart_items[0].user.phone_number
     context = {
         'cart_items': cart_items,
-        'cart_numbers': cart_numbers
+        'cart_numbers': cart_numbers,
+        'user_address': user_address,
+        'user_phone_number':user_phone_number,
     }
+    print("CArt Items are ",cart_items)
     return render(request, "cart.html", context)
 
 def get_cart(request):
@@ -119,3 +124,16 @@ def remove_all_items_from_cart(request):
     Cart.objects.filter(user_id=user.id).delete()
     messages.info(request, "Your cart is now empty!")
     return HttpResponse("")
+
+def final_cart_update(request):
+    if request.method == "POST":
+        final_cart_items = json.loads(request.POST.get('final_cart_items'))
+        print("Final Cart Items are ", final_cart_items)
+        user = request.user
+        for item in final_cart_items:
+            cart, created = Cart.objects.update_or_create(
+                user_id=user.id, product_id=item['productId'],
+                defaults={'quantity': item['quantity']}
+            )
+            cart.save()
+    return HttpResponse("Cart updated successfully")

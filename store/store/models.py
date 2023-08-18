@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import UniqueConstraint
+from decimal import Decimal
 
 class Cart(models.Model):
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='carts',null=True)  
@@ -7,11 +8,12 @@ class Cart(models.Model):
     product_name = models.CharField(max_length=128, default="")
     quantity = models.IntegerField(default=1)
     product_price = models.DecimalField(decimal_places=2, max_digits=10)
+    total_price = models.DecimalField(decimal_places=2, max_digits=10,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    @property
-    def price_total(self):
-        return self.quantity * self.product_price
+    def save(self, *args, **kwargs):
+        self.total_price = Decimal(self.quantity) * Decimal(self.product_price)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Product Name: {self.product_name}, User: {self.user.username}"

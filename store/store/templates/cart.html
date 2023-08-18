@@ -4,6 +4,24 @@
 Cart Page
 {% endblock %}
 
+{% block head %}
+<style>
+    @media (max-width: 767px) {
+        .modal-dialog {
+            max-width: 70%;
+            padding-left: 5%;
+        }
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* Adjust the padding as needed */
+            padding-left: 10%;
+            max-width: 80%;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block body %}
 {% if cart_items %}
 <div class="container">
@@ -30,8 +48,8 @@ Cart Page
                         {% endfor %}
                     </select>
                 </td>
-                <td>Rs. {{ cart_item.product_price }}</td>
-                <td id="price_total-{{cart_item.product_id}}">Rs. {{ cart_item.price_total }}</td>
+                <td id="product_price-{{ cart_item.product_id }}">Rs. {{ cart_item.product_price }}</td>
+                <td id="price_total-{{cart_item.product_id}}"></td>
                 <td><button class="btn btn-danger"
                         onclick="removeFromCart('{{ cart_item.product_id }}')">Remove</button></td>
             </tr>
@@ -41,37 +59,99 @@ Cart Page
     <hr>
     <h4>Total Cart Price: Rs. <span id="total_cart_price"></span></h4>
     <br>
-    <button class="btn btn-danger" onclick="removeAllFromCart()">Remove All Items From Cart</button>
+    <div class="buttons-container">
+        <button class="btn btn-danger" onclick="removeAllFromCart()">Remove All Items From Cart</button>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#finalizecartitems">
+            Proceed for Buying
+        </button>
+    </div>
+
 </div>
 {% else %}
 <div class="alert alert-primary alert-dismissible fade show" role="alert">
-     You have no items in cart currently!
+    You have no items in cart currently!
     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-      <span aria-hidden="true">&times;</span>
+        <span aria-hidden="true">&times;</span>
     </button>
-  </div>
-  <div style="padding-left: 45vw; padding-top: 10vh;">
-  <a class="btn btn-warning" href="/">Go Shopping!</a>
+</div>
+<div style="padding-left: 45vw; padding-top: 10vh;">
+    <a class="btn btn-warning" href="/">Go Shopping!</a>
 </div>
 {% endif %}
 
 
+
+<!-- Modal -->
+<div class="modal fade" id="finalizecartitems" tabindex="-1" role="dialog" aria-labelledby="finalizecartitemsLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="finalizecartitemsLabel">Confirm the Following</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="address">Address:</label>
+                    <textarea class="form-control" id="address" name="address" rows="3">{{ user_address }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="phone_number">Phone Number:</label>
+                    <input type="tel" class="form-control" id="phone_number" name="phone_number"
+                        value="{{ user_phone_number }}">
+                </div>
+                <div class="form-group">
+                    <label for="alternate_phone_number">Alternate Phone Number:</label>
+                    <input type="tel" class="form-control" id="alternate_phone_number" name="alternate_phone_number">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="proceedforpurchase()">Proceed to Purchase
+                    Page</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        update_total_cart_value()
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const row_id = row.id.split('-')[1];
+            const product_price_str = document.getElementById("product_price-" + row_id).textContent;
+            const product_price = product_price_str.replace('Rs. ', '');
+            const quantity = document.getElementById("quantity-" + row_id).value; // Ensure base 10
+            const total_price = (product_price * quantity).toFixed(2);
+            document.getElementById("price_total-" + row_id).textContent = "Rs. " + total_price;
+        });
+        update_total_cart_value();
     });
 
+
+
+    final_cart_items = [];
     function update_total_cart_value() {
-        let total_cart_price = 0
-        const rows = document.querySelectorAll('tbody tr')
+        let total_cart_price = 0;
+        const rows = document.querySelectorAll('tbody tr');
         rows.forEach(row => {
             row_id = row.id.split("-")[1];
             item_price = document.getElementById("price_total-" + row_id).textContent.replace("Rs.", "");
+            quantity = document.getElementById("quantity-" + row_id).value;
+            const existing_item_index = final_cart_items.findIndex(item => item.productId == row_id);
+            if (existing_item_index == -1) {
+                final_cart_items.push({ "productId": row_id, "quantity": quantity });
+            } else {
+                final_cart_items[existing_item_index].quantity = quantity;
+            }
             total_cart_price += parseFloat(item_price);
         });
         document.getElementById('total_cart_price').innerText = total_cart_price.toFixed(2);
-
     }
+
 
     function calculateprice(id, product_price) {
         quantity = document.getElementById('quantity-' + id).value;
@@ -93,9 +173,6 @@ Cart Page
                 updated_cart_items = cart_items.filter(item => item.productId != id)
                 setCookie('cartItems', JSON.stringify(updated_cart_items))
                 update_cart_page_upon_cart_item_removal(id)
-                if(updated_cart_items.length == 0){
-                    windows.location.replace("/");
-                }
             },
         });
     }
@@ -119,6 +196,27 @@ Cart Page
             },
         });
     }
+
+    function proceedforpurchase() {
+        console.log("Final Cart Items are ", final_cart_items);
+        address = document.getElementById('address').value;
+        phone_number = document.getElementById('phone_number').value;
+        alternate_phone_number = document.getElementById('alternate_phone_number').value;
+        console.log("Bronze Berry ", address, phone_number, alternate_phone_number);
+        //     $.ajax({
+        //         url: '/cart/finalcartupdate',
+        //         type: 'POST',
+        //         data: {
+        //             'csrfmiddlewaretoken': getCookie('csrftoken'),
+        //             'final_cart_items': JSON.stringify(final_cart_items),
+        //         }
+        //     })
+    }
+
+    // $(document).ready(function () {
+    //     $('.modal .modal-body').css('overflow-y', 'auto');
+    //     $('.modal .modal-body').css('max-width', $(window).width() * 0.7);
+    // });
 
 </script>
 {% endblock %}
