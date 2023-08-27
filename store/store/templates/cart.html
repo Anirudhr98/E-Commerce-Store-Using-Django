@@ -11,15 +11,18 @@ Cart Page
             max-width: 70%;
             padding-left: 5%;
         }
+
         .buttons-container {
             display: flex;
             flex-direction: column;
-            gap: 20px; /* Adjust the padding as needed */
+            gap: 20px;
+            /* Adjust the padding as needed */
             padding-left: 10%;
             max-width: 80%;
         }
     }
 </style>
+<script src="https://js.stripe.com/v3/"></script>
 {% endblock %}
 
 {% block body %}
@@ -95,11 +98,11 @@ Cart Page
             <div class="modal-body">
                 <div class="form-group">
                     <label for="address">Address:</label>
-                    <textarea class="form-control" id="address" name="address" rows="3">{{ user_address }}</textarea>
+                    <textarea class="form-control" id="address" name="address" rows="3" required>{{ user_address }}</textarea>
                 </div>
                 <div class="form-group">
                     <label for="phone_number">Phone Number:</label>
-                    <input type="tel" class="form-control" id="phone_number" name="phone_number"
+                    <input type="tel" class="form-control" id="phone_number" name="phone_number" required
                         value="{{ user_phone_number }}">
                 </div>
                 <div class="form-group">
@@ -109,22 +112,24 @@ Cart Page
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="proceedforpurchase()">Proceed to Purchase
-                    Page</button>
+                <button type="submit" id="checkout-button" class="btn btn-primary" onclick="purchase_function()">Pay
+                    Now</button>
             </div>
         </div>
     </div>
 </div>
 
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const rows = document.querySelectorAll('tbody tr');
         rows.forEach(row => {
-            const row_id = row.id.split('-')[1];
+            row_id = row.id.split("-",);
+            row_id = row_id[1] + "-" + row_id[2] + "-" + row_id[3] + "-" + row_id[4] + "-" + row_id[5]; 
             const product_price_str = document.getElementById("product_price-" + row_id).textContent;
+            console.log("Bronze Berry")
             const product_price = product_price_str.replace('Rs. ', '');
-            const quantity = document.getElementById("quantity-" + row_id).value; // Ensure base 10
+            console.log("Product price: " + product_price);
+            const quantity = document.getElementById("quantity-" + row_id).value;
             const total_price = (product_price * quantity).toFixed(2);
             document.getElementById("price_total-" + row_id).textContent = "Rs. " + total_price;
         });
@@ -138,7 +143,8 @@ Cart Page
         let total_cart_price = 0;
         const rows = document.querySelectorAll('tbody tr');
         rows.forEach(row => {
-            row_id = row.id.split("-")[1];
+            row_id = row.id.split("-",);
+            row_id = row_id[1] + "-" + row_id[2] + "-" + row_id[3] + "-" + row_id[4] + "-" + row_id[5];
             item_price = document.getElementById("price_total-" + row_id).textContent.replace("Rs.", "");
             quantity = document.getElementById("quantity-" + row_id).value;
             const existing_item_index = final_cart_items.findIndex(item => item.productId == row_id);
@@ -197,26 +203,35 @@ Cart Page
         });
     }
 
-    function proceedforpurchase() {
-        console.log("Final Cart Items are ", final_cart_items);
+    // Stripe Code
+    function purchase_function() {
+        console.log("Bronze Berry Pug")
         address = document.getElementById('address').value;
         phone_number = document.getElementById('phone_number').value;
         alternate_phone_number = document.getElementById('alternate_phone_number').value;
-        console.log("Bronze Berry ", address, phone_number, alternate_phone_number);
-        //     $.ajax({
-        //         url: '/cart/finalcartupdate',
-        //         type: 'POST',
-        //         data: {
-        //             'csrfmiddlewaretoken': getCookie('csrftoken'),
-        //             'final_cart_items': JSON.stringify(final_cart_items),
-        //         }
-        //     })
+        personal_details = [{"address": address, "phone_number": phone_number, "alternate_phone_number": alternate_phone_number }];
+        console.log("Final cart items ", final_cart_items);
+        console.log("Personal details ", personal_details);
+        fetch('/create_checkout_session/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({'final_cart_items':final_cart_items,"personal_details":personal_details}),
+        })
+            .then(function (response) {
+                console.log("First Then ")
+                return response.json();
+            })
+            .then(function (session) {
+                // Redirect to Stripe Checkout
+                console.log("2nd Then")
+                var stripe = Stripe('pk_test_51NgoITSBnszGagyZIZdreQAFSPkP778PskWv7lw73xL43Cr8mQZ3MTTdNhK98zjMc4DLo4O80MfnUPGXZeAFXeIN00R1XjOIOH');
+                stripe.redirectToCheckout({
+                    sessionId: session.session_id
+                });
+            });
     }
-
-    // $(document).ready(function () {
-    //     $('.modal .modal-body').css('overflow-y', 'auto');
-    //     $('.modal .modal-body').css('max-width', $(window).width() * 0.7);
-    // });
-
 </script>
 {% endblock %}

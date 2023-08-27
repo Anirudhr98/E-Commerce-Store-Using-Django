@@ -1,0 +1,78 @@
+{% extends "index.html" %}
+
+
+{% block title %}
+Orders Page
+{% endblock %}
+
+{% block body %}
+{% if orders %}
+<div class="container">
+    <h1>Your Orders</h1>
+    <br>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Product Name</th>
+                <th>Product Price</th>
+                <th>Product Quantity</th>
+                <th>Total Price</th>
+                <th>Order Date</th>
+                <th>Order Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.order_id }}</td>
+                <td>
+                    {% for item in order.get_products_ordered %}
+                    {{ item.product_name }}<br>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for item in order.get_products_ordered %}
+                    Rs.<span id="product_price"> {{ item.product_price }} </span><br>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for item in order.get_products_ordered %}
+                    {{ item.quantity }}<br>
+                    {% endfor %}
+                </td>
+                <td id="total_price_{{ order.order_id }}">
+                </td>
+                <td>{{ order.order_date }}</td>
+                <td>{{ order.order_status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-primary alert-dismissible fade show" role="alert">
+    You have no orders!
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<div style="padding-left: 45vw; padding-top: 10vh;">
+    <a class="btn btn-warning" href="/">Go Shopping!</a>
+</div>
+{% endif %}
+<script>
+     document.addEventListener("DOMContentLoaded", function() {
+        // Calculate and display total price for each order
+        {% for order in orders %}
+        var total_price_{{ order.order_id }} = 0;
+        {% for item in order.get_products_ordered %}
+        var product_price_{{ order.order_id }} = {{ item.product_price }};
+        var quantity_{{ order.order_id }} = {{ item.quantity }};
+        total_price_{{ order.order_id }} += product_price_{{ order.order_id }} * quantity_{{ order.order_id }};
+        {% endfor %}
+        document.getElementById("total_price_{{ order.order_id }}").textContent = 'Rs. ' + total_price_{{ order.order_id }};
+        {% endfor %}
+    });
+</script>
+{% endblock %}

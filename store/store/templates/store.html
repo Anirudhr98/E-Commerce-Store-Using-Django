@@ -26,7 +26,6 @@ Store
                             <button class="btn btn-warning btn-sm add-to-cart" data-product-id="{{ product.id }}"
                                 data-product-name="{{ product.name }}" data-product-price="{{ product.price }}">Add to
                                 Cart</button>
-                            <button class="btn btn-info btn-sm" onclick="checkout('{{ product.id }}')">Checkout</button>
                         </div>
                     </div>
                 </div>
@@ -78,6 +77,7 @@ Store
                 const productId = button.dataset.productId;
                 const productName = button.dataset.productName;
                 const productPrice = button.dataset.productPrice;
+                console.log("Product ID: ", productId)
                 if (authenticated) {
                     addToCart(productId, productName, productPrice);
                 } else {
@@ -99,6 +99,7 @@ Store
         }
 
         function addtoCartAjax(cartItems, cartCount, userId, productId, productName, productPrice) {
+            console.log("Inside AddToCartAjax")
             $.ajax({
                 url: "/addtocart/",
                 type: "POST",
@@ -118,13 +119,7 @@ Store
         }
 
 
-
-        // Updating Cart Button Information
-        updating_cart_button = JSON.parse(getCookie('cartItems'));
-        if (updating_cart_button) {
-            cartButton.textContent = 'Cart(' + updating_cart_button.length + ')';
-        }
+        
     });
-
 </script>
 {% endblock %}

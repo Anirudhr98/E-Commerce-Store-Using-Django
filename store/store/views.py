@@ -1,11 +1,18 @@
 from django.shortcuts import redirect,render,HttpResponse
-from .models import User,Product,Cart
+from django.http import JsonResponse
+from .models import User,Product,Cart,Order
 from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError
 from django.contrib.auth import login,logout,authenticate
 from django.core.paginator import Paginator
+import threading
+from decouple import config
 import json
+import stripe
+
 
 
 def store_view(request):
@@ -24,22 +31,25 @@ def store_view(request):
             return redirect("/login/")
 
 # Pulling items from database
-    items = Product.objects.all()
+    items = Product.objects.all().order_by("id")
     items_per_page = 6
     paginator = Paginator(items,items_per_page)
     current_page_number = request.GET.get('page')
     current_page_items = paginator.get_page(current_page_number)
+
+  
 
     items_to_add_to_cookie = []
     if request.user.is_authenticated:
         cart_items = get_cart(request)
         if cart_items:
             cookie = json.loads(request.COOKIES.get('cartItems', '[]'))
+            print("Cookie is ", cookie)
             for item in cart_items:
                 item.product_price = str(item.product_price)
-                if not any(existing_item['productId'] == str(item.product_id) for existing_item in cookie):
+                if not any(existing_item['productId'] == item.product_id for existing_item in cookie):
                     items_to_add_to_cookie.append({'productId': item.product_id, 'productName': item.product_name, 'productPrice': item.product_price})
-        
+
     return render(request, 'store.html', {'current_page_items': current_page_items,"items_to_add_to_cookie":json.dumps(items_to_add_to_cookie)})
 
     
@@ -83,6 +93,8 @@ def add_to_cart_view(request):
         userId = request.POST.get('userId')
         user = User.objects.get(pk=userId)
         existing_cart_items = Cart.objects.filter(user=user)
+        print("New cart Items ", new_cart_items)
+        print("Existing cart Items ", existing_cart_items)
         for item in new_cart_items:
             if not any(str(existing_item.product_id) == item["productId"] for existing_item in existing_cart_items):
                 cart_item = Cart(user=user, product_id=item["productId"], product_name=item["productName"], product_price=item["productPrice"])
@@ -93,15 +105,14 @@ def add_to_cart_view(request):
 def cart_view(request):
     cart_items = Cart.objects.filter(user_id=request.user.id)
     cart_numbers = [i for i in range(1,11)]
-    user_address = cart_items[0].user.address
-    user_phone_number = cart_items[0].user.phone_number
+    user_address = cart_items[0].user.address if cart_items and cart_items[0].user.address else None
+    user_phone_number = cart_items[0].user.phone_number if cart_items and cart_items[0].user.phone_number else None
     context = {
         'cart_items': cart_items,
         'cart_numbers': cart_numbers,
         'user_address': user_address,
         'user_phone_number':user_phone_number,
     }
-    print("CArt Items are ",cart_items)
     return render(request, "cart.html", context)
 
 def get_cart(request):
@@ -128,7 +139,6 @@ def remove_all_items_from_cart(request):
 def final_cart_update(request):
     if request.method == "POST":
         final_cart_items = json.loads(request.POST.get('final_cart_items'))
-        print("Final Cart Items are ", final_cart_items)
         user = request.user
         for item in final_cart_items:
             cart, created = Cart.objects.update_or_create(
@@ -137,3 +147,137 @@ def final_cart_update(request):
             )
             cart.save()
     return HttpResponse("Cart updated successfully")
+
+def create_order(request):
+    if request.method == 'POST':
+        final_cart_items = json.loads(request.POST.get('final_cart_items'))
+        personal_details = json.loads(request.POST.get('personal_details'))
+        payment_procedure(final_cart_items,personal_details)
+        return HttpResponse("")
+
+def create_checkout_session(request):
+    if request.method == "POST":
+        final_cart_items = json.loads(request.body.decode('utf-8')).get('final_cart_items')
+        personal_details = json.loads(request.body.decode('utf-8')).get('personal_details')
+        stripe.api_key = config('STRIPE_SECRET_KEY')
+        data_to_be_passed_to_stripe = get_final_cart_items(request, final_cart_items)
+        
+        metadata = {
+            "user_id" : str(request.user.id),
+            "address" : str(personal_details[0]["address"]),
+            "phone_number" : str(personal_details[0]["phone_number"]),
+            "alternate_phone_number" : str(personal_details[0]["alternate_phone_number"]),
+            "items" : json.dumps([
+                {
+                'product_id':   str(item["productId"]),
+                "product_name": str(item["product_name"]),
+                "quantity": str(item["quantity"]),
+                "product_price": str(item["product_price"]), 
+                }
+                for item in data_to_be_passed_to_stripe])
+        }
+        
+        line_items = []
+        for item in data_to_be_passed_to_stripe:
+            line_item = {
+                'price_data': {
+                    'currency': 'inr',
+                    'product_data': {
+                        'name': item["product_name"],
+                    },
+                    'unit_amount': int(item["product_price"] * 100),  # Convert price to cents
+                },
+                'quantity': item["quantity"],
+            }
+            line_items.append(line_item)
+
+        payment_method_types = ["card"]    
+           
+        # Create a Checkout session
+        session = stripe.checkout.Session.create(
+            line_items=line_items,
+            mode='payment',
+            payment_intent_data={
+                'metadata': metadata,
+            },
+            success_url = 'http://127.0.0.1:8000/order_message',
+            payment_method_types = payment_method_types,
+        )
+        return JsonResponse({'session_id': session.id})
+    return JsonResponse({'message': 'GET request received'})
+
+
+
+def get_final_cart_items(request,final_cart_items):
+    items = []
+    for item in final_cart_items:
+        cart_item = Cart.objects.filter(user_id = request.user.id,product_id = item["productId"]).first()
+        if cart_item:
+            items.append({'productId': item["productId"],'quantity': item["quantity"], 'product_price':cart_item.product_price,'product_name':cart_item.product_name})
+    return items    
+
+def orders(request):
+    orders = Order.objects.filter(user_id=request.user.id)  
+    return render(request, 'orders.html', { "orders": orders})
+
+
+
+@csrf_exempt
+def stripe_webhook(request):
+    if request.method == 'POST':
+        print("Inside Stripe Webhook request")
+        webhook_secret = config('WEBHOOK_KEY')
+        payload = request.body.decode('utf-8')
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, request.META['HTTP_STRIPE_SIGNATURE'], webhook_secret
+            )
+        except ValueError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        except stripe.error.SignatureVerificationError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+        if event.type == 'payment_intent.succeeded':
+            payment_intent =event.data.object
+            user = User.objects.get(id = payment_intent.metadata["user_id"])
+            alternate_phone_number_str = payment_intent["metadata"]["alternate_phone_number"]
+            if alternate_phone_number_str:
+                alternate_phone_number = int(alternate_phone_number_str)
+            else:
+                alternate_phone_number = 1
+            products_ordered =payment_intent["metadata"]["items"]
+
+            # Handling Concurrency and placing order
+            lock = threading.Lock()
+            with lock:
+                if can_order():
+                    order = Order.objects.create(
+                        user = user,
+                        webhook_event_id = payment_intent["id"],
+                        order_status='Payment Completed',
+                        total_amount = int((payment_intent.amount_received)/100),
+                        address = payment_intent["metadata"]["address"],
+                        phone_number = int(payment_intent["metadata"]["phone_number"]),
+                        alternate_phone_number = alternate_phone_number,
+                        products_ordered = products_ordered,
+                    )
+                    order.save()
+                else:
+                    payment_intent_id = payment_intent["id"]
+                    refund_amount = payment_intent.amount_received
+                    refund = stripe.Refund.create(payment_intent=payment_intent_id,amount=refund_amount,reason='requested_by_customer')
+                    messages.info(request,"Payment deducted from your bank account has been refunded!")
+                    return JsonResponse({'status': 'refund_successfull'})
+            return JsonResponse({'status': 'order_successfull'})
+        else:
+            return JsonResponse({'status': 'order_failure'})
+    return JsonResponse({'status':'None'})
+
+def can_order():
+    # Check if the order can be placed 
+    return True    
+
+def order_message(request):
+    return render(request,"order_message.html")
+
+

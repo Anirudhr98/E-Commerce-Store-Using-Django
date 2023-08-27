@@ -13,8 +13,8 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.14.0-beta2/css/bootstrap-select.min.css">
-  
-    {% block head %}{% endblock %}
+
+  {% block head %}{% endblock %}
 </head>
 
 <body>
@@ -36,6 +36,7 @@
         <a class="nav-item nav-link" href="/logout">Logout</a>
         {% endif %}
         <a class="nav-item nav-link" id="cart" href="/cart">Cart({{ cart_items.count }})</a>
+        <a class="nav-item nav-link" href="/orders">Orders</a>
       </div>
     </div>
   </nav>
@@ -64,9 +65,11 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
   {% load static %}
   <script src="{% static '/helper_functions.js' %}"></script>
   <script>
+
     function showFlashMessage(message, type) {
       const alertDiv = document.createElement('div');
       alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
@@ -76,6 +79,13 @@
                   <span aria-hidden="true">&times;</span>`;
       const flashContainer = document.getElementById('flash-container');
       flashContainer.appendChild(alertDiv);
+    }
+
+    // Updating Cart Button Information
+    updating_cart_button = JSON.parse(getCookie('cartItems'));
+    console.log("Pangpang ", updating_cart_button);
+    if (updating_cart_button) {
+      document.getElementById("cart").textContent = 'Cart(' + updating_cart_button.length + ')';
     }
   </script>
 
