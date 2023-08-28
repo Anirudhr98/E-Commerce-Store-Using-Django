@@ -20,6 +20,38 @@ Cart Page
             padding-left: 10%;
             max-width: 80%;
         }
+        th{
+            display: none;
+        }
+        td{
+            display: block;
+        }
+
+        td:nth-child(1)::before{
+            content: "Product Name";
+            font-weight: bold;
+            display: block;
+        }
+        td:nth-child(2)::before{
+            content: "Quantity";
+            font-weight: bold;
+            display: block;
+        }
+        td:nth-child(3)::before{
+            content: "Price Per Product";
+            font-weight: bold;
+            display: block;
+        }
+        td:nth-child(4)::before{
+            content: "Total Price";
+            font-weight: bold;
+            display: block;
+        }
+        td:nth-child(5)::before{
+            content: "Remove Item from Cart";
+            font-weight: bold;
+            display: block;
+        }
     }
 </style>
 <script src="https://js.stripe.com/v3/"></script>
@@ -29,46 +61,48 @@ Cart Page
 {% if cart_items %}
 <div class="container">
     <h2>Cart</h2>
-    <table class="table" id="cart_table">
-        <thead>
-            <tr>
-                <th>Product Name</th>
-                <th>Quantity</th>
-                <th>Price Per Product</th>
-                <th>Total Price</th>
-                <th>Remove Item from Cart</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for cart_item in cart_items %}
-            <tr id="row-{{ cart_item.product_id}}">
-                <td>{{ cart_item.product_name }}</td>
-                <td>
-                    <select name="quantity" id="quantity-{{ cart_item.product_id }}"
-                        onchange="calculateprice('{{ cart_item.product_id }}', '{{ cart_item.product_price }}')">
-                        {% for number in cart_numbers %}
-                        <option value="{{ number }}">{{ number }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td id="product_price-{{ cart_item.product_id }}">Rs. {{ cart_item.product_price }}</td>
-                <td id="price_total-{{cart_item.product_id}}"></td>
-                <td><button class="btn btn-danger"
-                        onclick="removeFromCart('{{ cart_item.product_id }}')">Remove</button></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <hr>
-    <h4>Total Cart Price: Rs. <span id="total_cart_price"></span></h4>
     <br>
-    <div class="buttons-container">
-        <button class="btn btn-danger" onclick="removeAllFromCart()">Remove All Items From Cart</button>
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#finalizecartitems">
-            Proceed for Buying
-        </button>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-hover" id="cart_table">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price Per Product</th>
+                    <th>Total Price</th>
+                    <th>Remove Item from Cart</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cart_item in cart_items %}
+                <tr id="row-{{ cart_item.product_id}}">
+                    <td>{{ cart_item.product_name }}</td>
+                    <td>
+                        <select name="quantity" id="quantity-{{ cart_item.product_id }}"
+                            onchange="calculateprice('{{ cart_item.product_id }}', '{{ cart_item.product_price }}')">
+                            {% for number in cart_numbers %}
+                            <option value="{{ number }}">{{ number }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td id="product_price-{{ cart_item.product_id }}">Rs. {{ cart_item.product_price }}</td>
+                    <td id="price_total-{{cart_item.product_id}}"></td>
+                    <td><button class="btn btn-danger"
+                            onclick="removeFromCart('{{ cart_item.product_id }}')">Remove</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <hr>
+        <h4>Total Cart Price: Rs. <span id="total_cart_price"></span></h4>
+        <br>
+        <div class="buttons-container mb-4">
+            <button class="btn btn-danger" onclick="removeAllFromCart()">Remove All Items From Cart</button>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#finalizecartitems">
+                Proceed for Buying
+            </button>
+        </div>
     </div>
-
 </div>
 {% else %}
 <div class="alert alert-primary alert-dismissible fade show" role="alert">
@@ -98,7 +132,8 @@ Cart Page
             <div class="modal-body">
                 <div class="form-group">
                     <label for="address">Address:</label>
-                    <textarea class="form-control" id="address" name="address" rows="3" required>{{ user_address }}</textarea>
+                    <textarea class="form-control" id="address" name="address" rows="3"
+                        required>{{ user_address }}</textarea>
                 </div>
                 <div class="form-group">
                     <label for="phone_number">Phone Number:</label>
@@ -124,7 +159,7 @@ Cart Page
         const rows = document.querySelectorAll('tbody tr');
         rows.forEach(row => {
             row_id = row.id.split("-",);
-            row_id = row_id[1] + "-" + row_id[2] + "-" + row_id[3] + "-" + row_id[4] + "-" + row_id[5]; 
+            row_id = row_id[1] + "-" + row_id[2] + "-" + row_id[3] + "-" + row_id[4] + "-" + row_id[5];
             const product_price_str = document.getElementById("product_price-" + row_id).textContent;
             console.log("Bronze Berry")
             const product_price = product_price_str.replace('Rs. ', '');
@@ -209,7 +244,7 @@ Cart Page
         address = document.getElementById('address').value;
         phone_number = document.getElementById('phone_number').value;
         alternate_phone_number = document.getElementById('alternate_phone_number').value;
-        personal_details = [{"address": address, "phone_number": phone_number, "alternate_phone_number": alternate_phone_number }];
+        personal_details = [{ "address": address, "phone_number": phone_number, "alternate_phone_number": alternate_phone_number }];
         console.log("Final cart items ", final_cart_items);
         console.log("Personal details ", personal_details);
         fetch('/create_checkout_session/', {
@@ -218,7 +253,7 @@ Cart Page
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken'),
             },
-            body: JSON.stringify({'final_cart_items':final_cart_items,"personal_details":personal_details}),
+            body: JSON.stringify({ 'final_cart_items': final_cart_items, "personal_details": personal_details }),
         })
             .then(function (response) {
                 console.log("First Then ")

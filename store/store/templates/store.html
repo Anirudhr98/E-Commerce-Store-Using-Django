@@ -14,8 +14,10 @@ Store
         <div class="col-md-4">
             <div class="card mb-3 border-primary" style="height: 71vh;">
                 <div class="card-body">
-                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail"
-                        style="height: 35vh;">
+                    <div class="container">
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail"
+                            style="height: 35vh;">
+                    </div>
                     <h5 class="card-title mt-1" style="height: 3vh; overflow: auto;">{{ product.name }}</h5>
                     <p class="card-text"><b>Price: Rs. {{ product.price }}</b></p>
                     <p class="card-text mb-2" style="height: 15vh; overflow: auto;">{{ product.description }}</p>
@@ -119,7 +121,7 @@ Store
         }
 
 
-        
+
     });
 </script>
 {% endblock %}
