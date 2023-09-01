@@ -27,7 +27,11 @@
         }
         updatecountdown();
         setInterval(updatecountdown, 1000);
+        document.cookie = "cartItems" +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.getElementById("cart").textContent = 'Cart(0)';
     }
+
+    
 
 </script>
 {% endblock %}

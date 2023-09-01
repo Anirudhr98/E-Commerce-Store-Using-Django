@@ -3,31 +3,52 @@
 Store
 {% endblock%}
 
-{% block body %}
 
+{% block body %}
 <!-- Showing Products -->
-<div class="container" style="padding-top: 12vh;">
+<p><h1 style="text-align: center;">Products Available</h1></p>
+
+<!-- Filter and Sort Products -->
+<div class="container">
+<form method="get">
+    <select name="category" style="height: 5vh;" class="mr-2">
+        <option value="">All Categories</option>
+        {% for item in unique_categories %}
+        <option style="text-transform: capitalize;" value="{{ item }}">{{ item }}</option>"
+        {% endfor %}
+    </select>
+    <select name="sort_by" style="height: 5vh;" class="mr-2">
+        <option value="">Sort by</option>
+        <option value="price">Price (Low to High)</option>
+        <option value="-price">Price (High to Low)</option>
+    </select>
+    <button type="submit" class="btn btn-outline-primary">Filter & Sort</button>
+</form>
+</div>
+
+<!-- Display Products  -->
+<div class="container" style="padding-top: 4vh;">
     {% for product in current_page_items %}
     {% if forloop.counter0|divisibleby:3 %}
     <div class="row">
         {% endif %}
         <div class="col-md-4">
-            <div class="card mb-3 border-primary" style="height: 71vh;">
+            <div class="card mb-3 border-primary" style="height: 63vh;">
                 <div class="card-body">
-                    <div class="container">
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail"
-                            style="height: 35vh;">
+                    <div class="container text-center">
+                        <img src="{{ product.image }}" alt="{{ product.name }}" class="img-fluid" style="height: 35vh;"
+                            loading="lazy">
                     </div>
-                    <h5 class="card-title mt-1" style="height: 3vh; overflow: auto;">{{ product.name }}</h5>
-                    <p class="card-text"><b>Price: Rs. {{ product.price }}</b></p>
-                    <p class="card-text mb-2" style="height: 15vh; overflow: auto;">{{ product.description }}</p>
+                    <h5 class="card-title mt-1 text-truncate text-center" style="height: 7vh;">
+                        {{ product.name }}</h5>
+                    <p class="card-text"><b style="float: left;">Price: Rs. {{ product.price }}</b> <b
+                            style="float: right; text-transform: capitalize;"> {{ product.category }}</b></p>
+                    <br>
                 </div>
                 <div class="card-footer" style="flex-wrap: wrap;">
                     <div class="row">
                         <div class="col-sm-12 text-center">
-                            <button class="btn btn-warning btn-sm add-to-cart" data-product-id="{{ product.id }}"
-                                data-product-name="{{ product.name }}" data-product-price="{{ product.price }}">Add to
-                                Cart</button>
+                                <a href="/product/{{ product.id }}"><button class="btn btn-outline-danger">See More Details</button></a>
                         </div>
                     </div>
                 </div>
@@ -44,11 +65,11 @@ Store
     <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
             {% if current_page_items.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{current_page_items.previous_page_number}}">Previous
+            <li class="page-item"><a class="page-link" href="?page={{current_page_items.previous_page_number}}&category={{ category }}&sort_by={{ sort_by }}">Previous
                     Page</a></li>
             {% endif %}
             {% if current_page_items.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{current_page_items.next_page_number}}">Next
+            <li class="page-item"><a class="page-link" href="?page={{current_page_items.next_page_number}}&category={{ category }}&sort_by={{ sort_by }}">Next
                     Page</a></li>
             {% endif %}
         </ul>
@@ -71,57 +92,6 @@ Store
             cookie.push(...items_to_add_to_cookie);
             setCookie('cartItems', JSON.stringify(cookie));
         }
-
-        // Attach event listeners to "Add to Cart" buttons
-        const addToCartButtons = document.querySelectorAll('.add-to-cart');
-        addToCartButtons.forEach(button => {
-            button.addEventListener('click', function () {
-                const productId = button.dataset.productId;
-                const productName = button.dataset.productName;
-                const productPrice = button.dataset.productPrice;
-                console.log("Product ID: ", productId)
-                if (authenticated) {
-                    addToCart(productId, productName, productPrice);
-                } else {
-                    showFlashMessage("Please login to add items to the cart", "info")
-                }
-            });
-        });
-
-        // Adding items to the cart
-        function addToCart(productId, productName, productPrice) {
-            let cartItems = JSON.parse(getCookie('cartItems'));
-            const alreadyInCart = cartItems.some(item => item.productId == productId);
-            if (alreadyInCart) {
-                showFlashMessage(`Product already exists in the cart`, 'info');
-            } else {
-                cartItems.push({ productId, productName, productPrice });
-                addtoCartAjax(cartItems, cartCount, '{{user.id}}', productId, productName, productPrice);
-            }
-        }
-
-        function addtoCartAjax(cartItems, cartCount, userId, productId, productName, productPrice) {
-            console.log("Inside AddToCartAjax")
-            $.ajax({
-                url: "/addtocart/",
-                type: "POST",
-                data: {
-                    "cartItems": JSON.stringify(cartItems),
-                    "cartCount": cartCount,
-                    "userId": userId,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function () {
-                    cartCount = cartItems.length;
-                    setCookie('cartItems', JSON.stringify(cartItems));
-                    cartButton.textContent = `Cart (${cartCount})`;
-                    showFlashMessage(`Product added successfully to the cart`, 'success');
-                }
-            });
-        }
-
-
-
     });
 </script>
 {% endblock %}

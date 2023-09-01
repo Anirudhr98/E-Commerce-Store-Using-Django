@@ -2,11 +2,11 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from decimal import Decimal
 import json
-import uuid
+
 
 class Cart(models.Model):
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='carts',null=True)  
-    product_id = models.CharField(max_length=128,default="")
+    product_id = models.IntegerField()
     product_name = models.CharField(max_length=128, default="")
     quantity = models.IntegerField(default=1)
     product_price = models.DecimalField(decimal_places=2, max_digits=10)
@@ -39,12 +39,15 @@ class User(models.Model):
         return self.name
 
 class Product(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.IntegerField(default=None,primary_key=True,db_index=True)
     name = models.CharField(max_length=128)
     price = models.DecimalField(decimal_places=2, max_digits=10)
     description = models.CharField(max_length=10000)
-    image = models.ImageField(upload_to='product_images/')
-
+    category = models.CharField(max_length=1000)
+    image = models.URLField()
+    rating = models.IntegerField()
+    count_rating = models.IntegerField()
+    
     def __str__(self):
         return self.name
 

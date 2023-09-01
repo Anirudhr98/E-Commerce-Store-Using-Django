@@ -8,7 +8,9 @@ from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError
 from django.contrib.auth import login,logout,authenticate
 from django.core.paginator import Paginator
+from django import template
 import threading
+import requests
 from decouple import config
 import json
 import stripe
@@ -30,27 +32,41 @@ def store_view(request):
             messages.info(request,"Please enter valid credentials!")  
             return redirect("/login/")
 
-# Pulling items from database
-    items = Product.objects.all().order_by("id")
+    unique_categories = Product.objects.values('category').distinct()
+    unique_categories = [item["category"] for item in unique_categories]
+
+    # Initialize with all products
+    items = Product.objects.all()
+
+    # Retrieve the filter and sort parameters from the GET request
+    category = request.GET.get('category')
+    sort_by = request.GET.get('sort_by')
+
+    # Apply filtering based on the category parameter
+    if category:
+        items = items.filter(category=category)
+
+    # Apply sorting based on the sort_by parameter
+    if sort_by:
+        items = items.order_by(sort_by)
+
+    # Pagination
     items_per_page = 6
-    paginator = Paginator(items,items_per_page)
+    paginator = Paginator(items, items_per_page)
     current_page_number = request.GET.get('page')
     current_page_items = paginator.get_page(current_page_number)
 
-  
 
     items_to_add_to_cookie = []
     if request.user.is_authenticated:
         cart_items = get_cart(request)
         if cart_items:
             cookie = json.loads(request.COOKIES.get('cartItems', '[]'))
-            print("Cookie is ", cookie)
             for item in cart_items:
                 item.product_price = str(item.product_price)
-                if not any(existing_item['productId'] == item.product_id for existing_item in cookie):
+                if not any(int(existing_item['productId']) == item.product_id for existing_item in cookie):
                     items_to_add_to_cookie.append({'productId': item.product_id, 'productName': item.product_name, 'productPrice': item.product_price})
-
-    return render(request, 'store.html', {'current_page_items': current_page_items,"items_to_add_to_cookie":json.dumps(items_to_add_to_cookie)})
+    return render(request, 'store.html', {'current_page_items': current_page_items,"items_to_add_to_cookie":json.dumps(items_to_add_to_cookie),"unique_categories":unique_categories,"category":category,"sort_by":sort_by})
 
     
 def login_view(request):
@@ -101,7 +117,6 @@ def add_to_cart_view(request):
                 cart_item.save()
         return redirect('/')
   
-
 def cart_view(request):
     cart_items = Cart.objects.filter(user_id=request.user.id)
     cart_numbers = [i for i in range(1,11)]
@@ -135,25 +150,6 @@ def remove_all_items_from_cart(request):
     Cart.objects.filter(user_id=user.id).delete()
     messages.info(request, "Your cart is now empty!")
     return HttpResponse("")
-
-def final_cart_update(request):
-    if request.method == "POST":
-        final_cart_items = json.loads(request.POST.get('final_cart_items'))
-        user = request.user
-        for item in final_cart_items:
-            cart, created = Cart.objects.update_or_create(
-                user_id=user.id, product_id=item['productId'],
-                defaults={'quantity': item['quantity']}
-            )
-            cart.save()
-    return HttpResponse("Cart updated successfully")
-
-def create_order(request):
-    if request.method == 'POST':
-        final_cart_items = json.loads(request.POST.get('final_cart_items'))
-        personal_details = json.loads(request.POST.get('personal_details'))
-        payment_procedure(final_cart_items,personal_details)
-        return HttpResponse("")
 
 def create_checkout_session(request):
     if request.method == "POST":
@@ -220,8 +216,6 @@ def orders(request):
     orders = Order.objects.filter(user_id=request.user.id)  
     return render(request, 'orders.html', { "orders": orders})
 
-
-
 @csrf_exempt
 def stripe_webhook(request):
     if request.method == 'POST':
@@ -262,6 +256,7 @@ def stripe_webhook(request):
                         products_ordered = products_ordered,
                     )
                     order.save()
+                    Cart.objects.filter(user_id = payment_intent["metadata"]["user_id"],).delete().save()
                 else:
                     payment_intent_id = payment_intent["id"]
                     refund_amount = payment_intent.amount_received
@@ -280,4 +275,31 @@ def can_order():
 def order_message(request):
     return render(request,"order_message.html")
 
+def seed_data(request):
+    url = "https://fakestoreapi.com/products"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        
+        for item in data:
+            price=item.get('price', 0.0)
+            product = Product.objects.create(
+                id=item.get('id'),
+                name=item.get('title', ''),
+                image=item.get('image', ''),
+                price = price*87,
+                description=item.get('description', ''),
+                category=item.get('category', ''),
+                rating=item.get('rating', {}).get('rate', 0.0),
+                count_rating=item.get('rating', {}).get('count', 0)
+            )
+            product.save()
+        return HttpResponse("Product Items Seeded")
+    else:
+        return HttpResponse(f"Failed to fetch data. Status code: {response.status_code}")
+    
 
+def product(request,product_id):
+    product = Product.objects.get(id=product_id)
+    return render(request, 'product_page.html', {'product': product})

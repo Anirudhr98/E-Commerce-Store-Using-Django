@@ -64,7 +64,7 @@ Cart Page
     <br>
     <div class="table-responsive">
         <table class="table table-bordered table-striped table-hover" id="cart_table">
-            <thead>
+            <thead  class="thead-dark">
                 <tr>
                     <th>Product Name</th>
                     <th>Quantity</th>
@@ -97,10 +97,11 @@ Cart Page
         <h4>Total Cart Price: Rs. <span id="total_cart_price"></span></h4>
         <br>
         <div class="buttons-container mb-4">
-            <button class="btn btn-danger" onclick="removeAllFromCart()">Remove All Items From Cart</button>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#finalizecartitems">
+            <button class="btn btn-danger mr-3" onclick="removeAllFromCart()">Remove All Items From Cart</button>
+            <button type="button" class="btn btn-primary mr-3" data-toggle="modal" data-target="#finalizecartitems">
                 Proceed for Buying
             </button>
+            <a href="/"><button class="btn btn-warning"> Go shopping!</button></a>
         </div>
     </div>
 </div>
@@ -158,8 +159,7 @@ Cart Page
     document.addEventListener('DOMContentLoaded', function () {
         const rows = document.querySelectorAll('tbody tr');
         rows.forEach(row => {
-            row_id = row.id.split("-",);
-            row_id = row_id[1] + "-" + row_id[2] + "-" + row_id[3] + "-" + row_id[4] + "-" + row_id[5];
+            row_id = row.id.split("-",)[1];
             const product_price_str = document.getElementById("product_price-" + row_id).textContent;
             console.log("Bronze Berry")
             const product_price = product_price_str.replace('Rs. ', '');
@@ -178,8 +178,7 @@ Cart Page
         let total_cart_price = 0;
         const rows = document.querySelectorAll('tbody tr');
         rows.forEach(row => {
-            row_id = row.id.split("-",);
-            row_id = row_id[1] + "-" + row_id[2] + "-" + row_id[3] + "-" + row_id[4] + "-" + row_id[5];
+            row_id = row.id.split("-",)[1];
             item_price = document.getElementById("price_total-" + row_id).textContent.replace("Rs.", "");
             quantity = document.getElementById("quantity-" + row_id).value;
             const existing_item_index = final_cart_items.findIndex(item => item.productId == row_id);
@@ -190,14 +189,14 @@ Cart Page
             }
             total_cart_price += parseFloat(item_price);
         });
-        document.getElementById('total_cart_price').innerText = total_cart_price.toFixed(2);
+        document.getElementById('total_cart_price').innerText = "Rs. " + total_cart_price.toFixed(2);
     }
 
 
     function calculateprice(id, product_price) {
         quantity = document.getElementById('quantity-' + id).value;
         var total_price = product_price * quantity;
-        document.getElementById('price_total-' + id).textContent = total_price.toFixed(2);
+        document.getElementById('price_total-' + id).textContent = "Rs. " +  total_price.toFixed(2);
         update_total_cart_value()
     }
 
@@ -213,6 +212,8 @@ Cart Page
                 cart_items = JSON.parse(getCookie('cartItems'));
                 updated_cart_items = cart_items.filter(item => item.productId != id)
                 setCookie('cartItems', JSON.stringify(updated_cart_items))
+                cart_length = cart_items.length - 1;
+                document.getElementById("cart").textContent = 'Cart(' + cart_length + ')';
                 update_cart_page_upon_cart_item_removal(id)
             },
         });
@@ -225,8 +226,9 @@ Cart Page
     }
 
     function removeAllFromCart() {
+        console.log("Inside removeAllFromCart")
         $.ajax({
-            url: '/cart/removeallitemsfromcart',
+            url: '/cart/removeallitemsfromcart/',
             type: 'POST',
             data: {
                 'csrfmiddlewaretoken': getCookie('csrftoken'),
