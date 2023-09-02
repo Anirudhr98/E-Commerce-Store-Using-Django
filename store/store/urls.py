@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import path
 from .views import login_view,logout_view,signup_view,store_view,add_to_cart_view,cart_view,remove_item_from_cart,remove_all_items_from_cart,create_checkout_session,orders,stripe_webhook,order_message,seed_data,product
 from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -22,3 +23,5 @@ urlpatterns = [
     path('seed_data',seed_data),
 ]
 
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

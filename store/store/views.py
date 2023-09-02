@@ -43,11 +43,11 @@ def store_view(request):
     sort_by = request.GET.get('sort_by')
 
     # Apply filtering based on the category parameter
-    if category:
+    if (category and category!="None"):
         items = items.filter(category=category)
 
     # Apply sorting based on the sort_by parameter
-    if sort_by:
+    if (sort_by and sort_by!="None"):
         items = items.order_by(sort_by)
 
     # Pagination
