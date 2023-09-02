@@ -1,3 +1,4 @@
 Django==3.2.20
 python-decouple==3.8
+requests==2.27.1
 stripe==6.0.0
