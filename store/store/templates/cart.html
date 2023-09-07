@@ -166,6 +166,7 @@ Cart Page
             console.log("Product price: " + product_price);
             const quantity = document.getElementById("quantity-" + row_id).value;
             const total_price = (product_price * quantity).toFixed(2);
+            total_price_element = document.getElementById("price_total-" + row_id);
             document.getElementById("price_total-" + row_id).textContent = "Rs. " + total_price;
         });
         update_total_cart_value();
@@ -189,7 +190,10 @@ Cart Page
             }
             total_cart_price += parseFloat(item_price);
         });
-        document.getElementById('total_cart_price').innerText = "Rs. " + total_cart_price.toFixed(2);
+        total_cart_price_element = document.getElementById("total_cart_price");
+        if (total_cart_price_element!=null){
+        total_cart_price_element = "Rs. " + total_cart_price.toFixed(2);
+        }
     }
 
 

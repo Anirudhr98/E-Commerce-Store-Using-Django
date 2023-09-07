@@ -85,7 +85,10 @@
     updating_cart_button = JSON.parse(getCookie('cartItems'));
     console.log("Pangpang ", updating_cart_button);
     if (updating_cart_button) {
-      document.getElementById("cart").textContent = 'Cart(' + updating_cart_button.length + ')';
+      cart_element = document.getElementById('cart');
+      if (cart_element!=null){
+      cart_element.textContent = 'Cart(' + updating_cart_button.length + ')';
+      }
     }
   </script>
 
