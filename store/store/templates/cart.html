@@ -12,42 +12,39 @@ Cart Page
             padding-left: 5%;
         }
 
-        .buttons-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            /* Adjust the padding as needed */
-            padding-left: 10%;
-            max-width: 80%;
-        }
-        th{
+        th {
             display: none;
         }
-        td{
+
+        td {
             display: block;
         }
 
-        td:nth-child(1)::before{
+        td:nth-child(1)::before {
             content: "Product Name";
             font-weight: bold;
             display: block;
         }
-        td:nth-child(2)::before{
+
+        td:nth-child(2)::before {
             content: "Quantity";
             font-weight: bold;
             display: block;
         }
-        td:nth-child(3)::before{
+
+        td:nth-child(3)::before {
             content: "Price Per Product";
             font-weight: bold;
             display: block;
         }
-        td:nth-child(4)::before{
+
+        td:nth-child(4)::before {
             content: "Total Price";
             font-weight: bold;
             display: block;
         }
-        td:nth-child(5)::before{
+
+        td:nth-child(5)::before {
             content: "Remove Item from Cart";
             font-weight: bold;
             display: block;
@@ -60,11 +57,13 @@ Cart Page
 {% block body %}
 {% if cart_items %}
 <div class="container">
-    <h2>Cart</h2>
+    <p>
+    <h2 style="text-align: center;">Cart</h2>
+    </p>
     <br>
     <div class="table-responsive">
         <table class="table table-bordered table-striped table-hover" id="cart_table">
-            <thead  class="thead-dark">
+            <thead class="thead-dark">
                 <tr>
                     <th>Product Name</th>
                     <th>Quantity</th>
@@ -96,13 +95,29 @@ Cart Page
         <hr>
         <h4>Total Cart Price: Rs. <span id="total_cart_price"></span></h4>
         <br>
-        <div class="buttons-container mb-4">
-            <button class="btn btn-danger mr-3" onclick="removeAllFromCart()">Remove All Items From Cart</button>
-            <button type="button" class="btn btn-primary mr-3" data-toggle="modal" data-target="#finalizecartitems">
-                Proceed for Buying
-            </button>
-            <a href="/"><button class="btn btn-warning"> Go shopping!</button></a>
+
+        <!-- Displaying buttons -->
+        <div class="d-none d-md-block">
+            <!-- This section will be visible on medium and larger screens -->
+            <div class="text-center">
+                <button class="btn btn-danger mr-3" onclick="removeAllFromCart()">Remove All Items From Cart</button>
+                <button type="button" class="btn btn-primary mr-3" data-toggle="modal" data-target="#finalizecartitems">
+                    Proceed for Buying
+                </button>
+                <button class="btn btn-warning"><a href="/" style="color: black;"> Go shopping!</a></button>
+            </div>
         </div>
+        <div class="d-md-none">
+            <!-- This section will be visible on small screens -->
+            <div class="text-center">
+                <button class="btn btn-danger mb-3" onclick="removeAllFromCart()">Remove All Items From Cart</button>
+                <button type="button" class="btn btn-primary mb-3" data-toggle="modal" data-target="#finalizecartitems">
+                    Proceed for Buying
+                </button><br>
+                <button class="btn btn-warning"><a href="/" style="color: black;"> Go shopping!</a></button><br><br>
+            </div>
+        </div>
+        
     </div>
 </div>
 {% else %}
@@ -112,8 +127,8 @@ Cart Page
         <span aria-hidden="true">&times;</span>
     </button>
 </div>
-<div style="padding-left: 45vw; padding-top: 10vh;">
-    <a class="btn btn-warning" href="/">Go Shopping!</a>
+<div class="text-center" style="padding-top:10vh ;">
+    <a href="/"><button type="button" class="btn btn-warning">Go Shopping!</button></a>
 </div>
 {% endif %}
 
@@ -161,9 +176,7 @@ Cart Page
         rows.forEach(row => {
             row_id = row.id.split("-",)[1];
             const product_price_str = document.getElementById("product_price-" + row_id).textContent;
-            console.log("Bronze Berry")
             const product_price = product_price_str.replace('Rs. ', '');
-            console.log("Product price: " + product_price);
             const quantity = document.getElementById("quantity-" + row_id).value;
             const total_price = (product_price * quantity).toFixed(2);
             total_price_element = document.getElementById("price_total-" + row_id);
@@ -191,8 +204,8 @@ Cart Page
             total_cart_price += parseFloat(item_price);
         });
         total_cart_price_element = document.getElementById("total_cart_price");
-        if (total_cart_price_element!=null){
-        total_cart_price_element = "Rs. " + total_cart_price.toFixed(2);
+        if (total_cart_price_element != null) {
+            total_cart_price_element.textContent = "Rs. " + total_cart_price.toFixed(2);
         }
     }
 
@@ -200,7 +213,7 @@ Cart Page
     function calculateprice(id, product_price) {
         quantity = document.getElementById('quantity-' + id).value;
         var total_price = product_price * quantity;
-        document.getElementById('price_total-' + id).textContent = "Rs. " +  total_price.toFixed(2);
+        document.getElementById('price_total-' + id).textContent = "Rs. " + total_price.toFixed(2);
         update_total_cart_value()
     }
 
@@ -217,6 +230,9 @@ Cart Page
                 updated_cart_items = cart_items.filter(item => item.productId != id)
                 setCookie('cartItems', JSON.stringify(updated_cart_items))
                 cart_length = cart_items.length - 1;
+                if (cart_length == 0) {
+                    removeAllFromCart();
+                }
                 document.getElementById("cart").textContent = 'Cart(' + cart_length + ')';
                 update_cart_page_upon_cart_item_removal(id)
             },
@@ -230,7 +246,6 @@ Cart Page
     }
 
     function removeAllFromCart() {
-        console.log("Inside removeAllFromCart")
         $.ajax({
             url: '/cart/removeallitemsfromcart/',
             type: 'POST',
@@ -246,13 +261,10 @@ Cart Page
 
     // Stripe Code
     function purchase_function() {
-        console.log("Bronze Berry Pug")
         address = document.getElementById('address').value;
         phone_number = document.getElementById('phone_number').value;
         alternate_phone_number = document.getElementById('alternate_phone_number').value;
         personal_details = [{ "address": address, "phone_number": phone_number, "alternate_phone_number": alternate_phone_number }];
-        console.log("Final cart items ", final_cart_items);
-        console.log("Personal details ", personal_details);
         fetch('/create_checkout_session/', {
             method: 'POST',
             headers: {
@@ -262,12 +274,10 @@ Cart Page
             body: JSON.stringify({ 'final_cart_items': final_cart_items, "personal_details": personal_details }),
         })
             .then(function (response) {
-                console.log("First Then ")
                 return response.json();
             })
             .then(function (session) {
                 // Redirect to Stripe Checkout
-                console.log("2nd Then")
                 var stripe = Stripe('pk_test_51NgoITSBnszGagyZIZdreQAFSPkP778PskWv7lw73xL43Cr8mQZ3MTTdNhK98zjMc4DLo4O80MfnUPGXZeAFXeIN00R1XjOIOH');
                 stripe.redirectToCheckout({
                     sessionId: session.session_id

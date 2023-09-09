@@ -2,10 +2,12 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from decimal import Decimal
 import json
-
+from django.db import models
+from django.contrib.auth.models import BaseUserManager,AbstractBaseUser,PermissionsMixin
+from django.utils import timezone
 
 class Cart(models.Model):
-    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='carts',null=True)  
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='carts',null=True)  
     product_id = models.IntegerField()
     product_name = models.CharField(max_length=128, default="")
     quantity = models.IntegerField(default=1)
@@ -18,7 +20,7 @@ class Cart(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Product Name: {self.product_name}, User: {self.user.username}"
+        return f"Product Name: {self.product_name}, User: {self.user.name}"
 
     class Meta:
         constraints = [
@@ -26,17 +28,6 @@ class Cart(models.Model):
         ]
 
 
-class User(models.Model):
-    name = models.CharField(max_length=128)
-    username = models.CharField(max_length=128, unique=True, null=False)
-    email = models.EmailField(unique=True)
-    address = models.CharField(max_length=1000)
-    phone_number = models.IntegerField(null=False, default=1234567890)
-    password = models.CharField(max_length=128, default='')
-    cart = models.ForeignKey(Cart, on_delete=models.SET_NULL, null=True, blank=True, related_name='user_cart') 
-
-    def __str__(self):
-        return self.name
 
 class Product(models.Model):
     id = models.IntegerField(default=None,primary_key=True,db_index=True)
@@ -54,7 +45,7 @@ class Product(models.Model):
 
 class Order(models.Model):
     order_id = models.AutoField(primary_key=True, unique = True)   
-    user = models.ForeignKey(User, on_delete=models.CASCADE,related_name='user')
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE,related_name='user')
     order_date = models.DateField(auto_now_add=True)
     order_status = models.CharField(max_length=100)
     webhook_event_id = models.CharField(max_length=100,null=False)
@@ -73,7 +64,45 @@ class Order(models.Model):
         except json.JSONDecodeError as e:
             return []
 
-
     
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, password, **extra_fields)
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    address = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=15, unique=True)
+    cart = models.ForeignKey(Cart, on_delete=models.SET_NULL, null=True, blank=True, related_name='user_cart') 
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(default=timezone.now)
+    groups = models.ManyToManyField(
+        'auth.Group',
+        blank=True,
+        related_name='customuser_set',  
+        related_query_name='user'
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        blank=True,
+        related_name='customuser_set',  
+        related_query_name='user'
+    )
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name']
 

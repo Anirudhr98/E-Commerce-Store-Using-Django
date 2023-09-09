@@ -1,14 +1,12 @@
 from django.shortcuts import redirect,render,HttpResponse
 from django.http import JsonResponse
-from .models import User,Product,Cart,Order
+from .models import Product,Cart,Order,CustomUser
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError
 from django.contrib.auth import login,logout,authenticate
+from django.contrib.auth.decorators import login_required,user_passes_test
 from django.core.paginator import Paginator
-from django import template
 import threading
 import requests
 from decouple import config
@@ -17,20 +15,25 @@ import stripe
 
 
 
+
 def store_view(request):
     # Logging in user
     if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        user = authenticate(request,username=username,password=password)
-        if user is not None:
-            login(request,user)
-            cart_items = get_cart(request)
-            messages.success(request,"You have been logged in!")
-            return redirect("/")
+        if not request.user.is_authenticated:
+            email = request.POST.get("email")
+            password = request.POST.get("password")
+            user = authenticate(request,email=email,password=password)
+            if user is not None:
+                login(request,user)
+                cart_items = get_cart(request)
+                messages.success(request,"You have been logged in!")
+                return redirect("/")
+            else:
+                messages.info(request,"Please enter valid credentials!")  
+                return redirect("/login/")
         else:
-            messages.info(request,"Please enter valid credentials!")  
-            return redirect("/login/")
+            messages.info(request,"Please logout and then re-login!")     
+            return redirect("/")   
 
     unique_categories = Product.objects.values('category').distinct()
     unique_categories = [item["category"] for item in unique_categories]
@@ -73,7 +76,6 @@ def login_view(request):
     if request.method == "POST":
         name = request.POST.get("name")
         email = request.POST.get("email")
-        username = request.POST.get("username")
         address = request.POST.get("address")
         phone_number = request.POST.get("phone_number")
         password = request.POST.get("password")
@@ -82,8 +84,8 @@ def login_view(request):
             messages.info(request,"Passwords do not match!")
             return redirect("/signup/",)
         try:
-            hashed_password = make_password(password)
-            user = User(name = name,email=email,username=username,address=address,phone_number=phone_number,password=hashed_password)
+            user = CustomUser(name = name, email = email, address = address,phone_number=phone_number)
+            user.set_password(password)
             user.save()
             messages.success(request,"You have been successfully signed up!")
             return redirect('/login/')
@@ -93,6 +95,7 @@ def login_view(request):
 
     return render(request,"login.html")
 
+@login_required
 def logout_view(request):
     response = redirect("/")
     response.set_cookie("cartItems", "", expires="Thu, 01 Jan 1970 00:00:00 GMT")
@@ -103,20 +106,20 @@ def logout_view(request):
 def signup_view(request):
     return render(request,"signup.html")
 
+@login_required
 def add_to_cart_view(request):
     if request.method == "POST":
         new_cart_items = json.loads(request.POST.get('cartItems'))
         userId = request.POST.get('userId')
-        user = User.objects.get(pk=userId)
+        user = CustomUser.objects.get(pk=userId)
         existing_cart_items = Cart.objects.filter(user=user)
-        print("New cart Items ", new_cart_items)
-        print("Existing cart Items ", existing_cart_items)
         for item in new_cart_items:
             if not any(str(existing_item.product_id) == item["productId"] for existing_item in existing_cart_items):
                 cart_item = Cart(user=user, product_id=item["productId"], product_name=item["productName"], product_price=item["productPrice"])
                 cart_item.save()
         return redirect('/')
-  
+
+@login_required
 def cart_view(request):
     cart_items = Cart.objects.filter(user_id=request.user.id)
     cart_numbers = [i for i in range(1,11)]
@@ -130,11 +133,13 @@ def cart_view(request):
     }
     return render(request, "cart.html", context)
 
+@login_required
 def get_cart(request):
     user = request.user
     cart_items = Cart.objects.filter(user_id = user.id)
     return cart_items
 
+@login_required
 def remove_item_from_cart(request,product_id):
     if request.method == "POST":
         user = request.user
@@ -145,12 +150,14 @@ def remove_item_from_cart(request,product_id):
         except Cart.DoesNotExist:
             return redirect('/cart/')
  
+@login_required
 def remove_all_items_from_cart(request):
     user = request.user
     Cart.objects.filter(user_id=user.id).delete()
     messages.info(request, "Your cart is now empty!")
     return HttpResponse("")
 
+@login_required
 def create_checkout_session(request):
     if request.method == "POST":
         final_cart_items = json.loads(request.body.decode('utf-8')).get('final_cart_items')
@@ -202,8 +209,7 @@ def create_checkout_session(request):
         return JsonResponse({'session_id': session.id})
     return JsonResponse({'message': 'GET request received'})
 
-
-
+@login_required
 def get_final_cart_items(request,final_cart_items):
     items = []
     for item in final_cart_items:
@@ -212,14 +218,15 @@ def get_final_cart_items(request,final_cart_items):
             items.append({'productId': item["productId"],'quantity': item["quantity"], 'product_price':cart_item.product_price,'product_name':cart_item.product_name})
     return items    
 
+@login_required
 def orders(request):
     orders = Order.objects.filter(user_id=request.user.id)  
     return render(request, 'orders.html', { "orders": orders})
 
+@login_required
 @csrf_exempt
 def stripe_webhook(request):
     if request.method == 'POST':
-        print("Inside Stripe Webhook request")
         webhook_secret = config('WEBHOOK_KEY')
         payload = request.body.decode('utf-8')
         try:
@@ -233,7 +240,7 @@ def stripe_webhook(request):
 
         if event.type == 'payment_intent.succeeded':
             payment_intent =event.data.object
-            user = User.objects.get(id = payment_intent.metadata["user_id"])
+            user = CustomUser.objects.get(id = payment_intent.metadata["user_id"])
             alternate_phone_number_str = payment_intent["metadata"]["alternate_phone_number"]
             if alternate_phone_number_str:
                 alternate_phone_number = int(alternate_phone_number_str)
@@ -272,16 +279,17 @@ def can_order():
     # Check if the order can be placed 
     return True    
 
+@login_required
 def order_message(request):
     return render(request,"order_message.html")
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def seed_data(request):
     url = "https://fakestoreapi.com/products"
     response = requests.get(url)
-    
     if response.status_code == 200:
         data = response.json()
-        
         for item in data:
             price=item.get('price', 0.0)
             product = Product.objects.create(

@@ -62,7 +62,7 @@ Orders Page
 {% block body %}
 {% if orders %}
 <div class="container">
-    <h1>Your Orders</h1>
+    <p><h2 style="text-align: center;">Orders</h2></p>
     <br>
     <div class="table-responsive">
         <table class="table table-bordered table-striped table-hover">
@@ -116,8 +116,8 @@ Orders Page
         <span aria-hidden="true">&times;</span>
     </button>
 </div>
-<div style="padding-left: 45vw; padding-top: 10vh;">
-    <a class="btn btn-warning" href="/">Go Shopping!</a>
+<div class="text-center" style="padding-top:10vh ;">
+    <a href="/"><button type="button" class="btn btn-warning">Go Shopping!</button></a>
 </div>
 {% endif %}
 {% endblock %}
