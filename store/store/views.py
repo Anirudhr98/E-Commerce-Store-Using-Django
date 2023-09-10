@@ -114,9 +114,13 @@ def add_to_cart_view(request):
         user = CustomUser.objects.get(pk=userId)
         existing_cart_items = Cart.objects.filter(user=user)
         for item in new_cart_items:
-            if not any(str(existing_item.product_id) == item["productId"] for existing_item in existing_cart_items):
-                cart_item = Cart(user=user, product_id=item["productId"], product_name=item["productName"], product_price=item["productPrice"])
-                cart_item.save()
+            try:
+                if not any(str(existing_item.product_id) == item["productId"] for existing_item in existing_cart_items):
+                    cart_item = Cart(user=user, product_id=item["productId"], product_name=item["productName"], product_price=item["productPrice"])
+                    cart_item.save()
+            except IntegrityError:
+                messages.info(request,"Product already exists in the cart!")
+                return redirect("/")
         return redirect('/')
 
 @login_required

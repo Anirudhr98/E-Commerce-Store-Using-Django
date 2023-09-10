@@ -83,7 +83,7 @@ Orders Page
                     <td>{{ order.order_id }}</td>
                     <td>
                         {% for item in order.get_products_ordered %}
-                        {{ item.product_name }}<br>
+                        <a style="color: black;" href = '/product/{{item.product_id}}'>{{ item.product_name }}</a><br>
                         {% endfor %}
                     </td>
                     <td>

@@ -3,27 +3,39 @@
 Store
 {% endblock%}
 
+{% block head %}
+<style>
+    @media (max-width: 767px) {
+        #filter_button {
+            margin-top: 1rem !important;
+        }
+    }
+</style>
+
+{% endblock %}
 
 {% block body %}
 <!-- Showing Products -->
-<p><h1 style="text-align: center;">Products Available</h1></p>
+<p>
+<h1 style="text-align: center;">Products Available</h1>
+</p>
 
 <!-- Filter and Sort Products -->
 <div class="container">
-<form method="get">
-    <select name="category" style="height: 5vh;" class="mr-2">
-        <option value="">All Categories</option>
-        {% for item in unique_categories %}
-        <option style="text-transform: capitalize;" value="{{ item }}">{{ item }}</option>"
-        {% endfor %}
-    </select>
-    <select name="sort_by" style="height: 5vh;" class="mr-2">
-        <option value="">Sort by</option>
-        <option value="price">Price (Low to High)</option>
-        <option value="-price">Price (High to Low)</option>
-    </select>
-    <button type="submit" class="btn btn-outline-primary">Filter & Sort</button>
-</form>
+    <form method="get">
+        <select name="category" style="height: 5vh;" class="mr-2">
+            <option value="">All Categories</option>
+            {% for item in unique_categories %}
+            <option style="text-transform: capitalize;" value="{{ item }}">{{ item }}</option>"
+            {% endfor %}
+        </select>
+        <select name="sort_by" style="height: 5vh;" class="mr-2">
+            <option value="">Sort by</option>
+            <option value="price">Price (Low to High)</option>
+            <option value="-price">Price (High to Low)</option>
+        </select>
+        <button type="submit" class="btn btn-outline-primary" id="filter_button">Filter & Sort</button>
+    </form>
 </div>
 
 <!-- Display Products  -->
@@ -48,7 +60,8 @@ Store
                 <div class="card-footer" style="flex-wrap: wrap;">
                     <div class="row">
                         <div class="col-sm-12 text-center">
-                                <a href="/product/{{ product.id }}"><button class="btn btn-outline-danger">See More Details</button></a>
+                            <a href="/product/{{ product.id }}"><button class="btn btn-outline-danger">See More
+                                    Details</button></a>
                         </div>
                     </div>
                 </div>
@@ -65,11 +78,13 @@ Store
     <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
             {% if current_page_items.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{current_page_items.previous_page_number}}&category={{ category }}&sort_by={{ sort_by }}">Previous
+            <li class="page-item"><a class="page-link"
+                    href="?page={{current_page_items.previous_page_number}}&category={{ category }}&sort_by={{ sort_by }}">Previous
                     Page</a></li>
             {% endif %}
             {% if current_page_items.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{current_page_items.next_page_number}}&category={{ category }}&sort_by={{ sort_by }}">Next
+            <li class="page-item"><a class="page-link"
+                    href="?page={{current_page_items.next_page_number}}&category={{ category }}&sort_by={{ sort_by }}">Next
                     Page</a></li>
             {% endif %}
         </ul>
