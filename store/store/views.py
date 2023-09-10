@@ -223,7 +223,7 @@ def orders(request):
     orders = Order.objects.filter(user_id=request.user.id)  
     return render(request, 'orders.html', { "orders": orders})
 
-@login_required
+
 @csrf_exempt
 def stripe_webhook(request):
     if request.method == 'POST':
